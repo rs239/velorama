@@ -121,8 +121,8 @@ def execute_cmdline():
 		Y = torch.FloatTensor(Y_orig-Y_orig.mean(0))/std
 
 	else:
-                assert args.x_norm == 'none'
-                
+
+		assert args.x_norm == 'none'				
 		X = torch.FloatTensor(adata[:,adata.var['is_reg']].X.toarray())
 		Y = torch.FloatTensor(adata[:,adata.var['is_target']].X.toarray())
 
