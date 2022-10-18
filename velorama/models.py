@@ -11,7 +11,7 @@
 import torch
 import torch.nn as nn
 
-from utils import construct_S, seq2dag, construct_dag, activation_helper
+from .utils import construct_S, seq2dag, construct_dag, activation_helper
 
 class MLP(nn.Module):
 
