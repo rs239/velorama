@@ -2,8 +2,6 @@
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/velorama_v5.png
    :target: https://pypi.org/project/velorama
-.. |Docs| image:: https://github.com/rs239/velorama readthedocs.org/projects/schema-multimodal/badge/?version=latest
-   :target: https://schema-multimodal.readthedocs.io/en/latest/?badge=latest
 
 
 
@@ -19,10 +17,10 @@ Here are some of the analyses that you can do with Velorama:
   - infer over branching/merging trajectories, with just pseudotime data, without having to manually separate them.
   - estimate the relative speed of various regulators (i.e., how quickly they act on the target.
     
-Schema offers support for both pseudotime and RNA velocity data. 
+Velorama offers support for both pseudotime and RNA velocity data. 
 
 
-Schema is based on a Granger causal approach and models the differentiation landscape as a directed acyclic graph of cells, rather than as a linear ordering that previous approaches have done.
+Velorama is based on a Granger causal approach and models the differentiation landscape as a directed acyclic graph of cells, rather than as a linear ordering that previous approaches have done.
 
 
 We encourage you to report issues at our `Github page`_ ; you can also create pull reports there to contribute your enhancements.

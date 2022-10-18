@@ -19,7 +19,7 @@ from models import *
 from train import *
 from utils import *
 
-def main():
+def execute_cmdline():
 
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-m','--method',dest='method',type=str,default='baseline')
@@ -172,4 +172,4 @@ def main():
 	np.savetxt(os.path.join(gc_dir,dir_name + '.time.txt'),np.array([time.time()-total_start]))
 
 if __name__ == "__main__":
-	main()
+	execute_cmdline()

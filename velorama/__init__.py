@@ -1,8 +1,9 @@
 
 from .models import VeloramaMLP
 from .train import train_model
+from .run import execute_cmdline
 
-__all__ = ['VeloramaMLP', 'train_model']
+__all__ = ['VeloramaMLP', 'train_model', 'execute_cmdline']
 
 
 import pkgutil, pathlib, importlib
