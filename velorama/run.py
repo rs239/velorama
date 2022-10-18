@@ -26,7 +26,7 @@ def execute_cmdline():
 	parser.add_argument('-ds','--dataset',dest='dataset',type=str)
 	parser.add_argument('-dyn','--dyn',dest='dynamics',type=str,default='pseudotime')
 	parser.add_argument('-dev','--device',dest='device',type=str,default='cpu')
-	parser.add_argument('-s','--trial_seed',dest='trial',type=int,default=0,help='random seed used for trial. set to 0,1,2 etc.')
+	parser.add_argument('-s','--seed',dest='seed',type=int,default=0,help='random seed used for trial. set to 0,1,2 etc.')
 	parser.add_argument('-lmr','--lam_ridge',dest='lam_ridge',type=float,default=0., help='Unsupported currently')
 	parser.add_argument('-p','--penalty',dest='penalty',type=str,default="H")
 	parser.add_argument('-l','--lag',dest='lag',type=int,default=5)
@@ -133,7 +133,7 @@ def execute_cmdline():
 	A = torch.FloatTensor(A)
 	AX = calculate_AX(A,X,args.lag)
 
-	dir_name = '{}.trial{}.h{}.{}.lag{}.{}'.format(args.method,args.trial_seed,args.hidden,args.penalty,args.lag,args.dynamics)
+	dir_name = '{}.seed{}.h{}.{}.lag{}.{}'.format(args.method,args.seed,args.hidden,args.penalty,args.lag,args.dynamics)
 
 	if not os.path.exists(os.path.join(gc_dir,dir_name)):
 		os.mkdir(os.path.join(gc_dir,dir_name))
@@ -147,7 +147,7 @@ def execute_cmdline():
 	config = {'method': args.method,
 			  'AX': AX,
 			  'Y': Y,
-			  'trial': args.trial_seed,
+			  'trial': args.seed,
 			  'lr': args.learning_rate,
 			  'lam': tune.grid_search(lam_list),
 			  'lam_ridge': args.lam_ridge,
