@@ -133,7 +133,7 @@ def execute_cmdline():
 	A = torch.FloatTensor(A)
 	AX = calculate_AX(A,X,args.lag)
 
-	dir_name = '{}.trial{}.h{}.{}.lag{}.{}'.format(args.method,args.trial_no,args.hidden,args.penalty,args.lag,args.dynamics)
+	dir_name = '{}.trial{}.h{}.{}.lag{}.{}'.format(args.method,args.trial_seed,args.hidden,args.penalty,args.lag,args.dynamics)
 
 	if not os.path.exists(os.path.join(gc_dir,dir_name)):
 		os.mkdir(os.path.join(gc_dir,dir_name))
@@ -147,7 +147,7 @@ def execute_cmdline():
 	config = {'method': args.method,
 			  'AX': AX,
 			  'Y': Y,
-			  'trial': args.trial_no,
+			  'trial': args.trial_seed,
 			  'lr': args.learning_rate,
 			  'lam': tune.grid_search(lam_list),
 			  'lam_ridge': args.lam_ridge,
