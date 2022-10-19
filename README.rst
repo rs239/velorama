@@ -22,8 +22,11 @@ Velorama offers support for both pseudotime and RNA velocity data.
 
 Velorama is based on a Granger causal approach and models the differentiation landscape as a directed acyclic graph of cells, rather than as a linear ordering that previous approaches have done.
 
-## API Example Usage
-Velorama is currently implemented as a command line tool that operates on AnnData objects. First, prepare an AnnData object of the dataset to be analyzed with Velorama and annotate genes that are to be analyzed as candidate regulators and candidate targets as follows. Here, ``regulator_genes`` is the set of gene symbols or IDs for the candidate regulators, while ```target_genes``` indicates the set of gene symbols or IDs for the candidate target genes. This AnnData object should be saved as ``{dataset}.h5ad``. ::
+=================
+API Example Usage
+=================
+
+Velorama is currently implemented as a command line tool that operates on AnnData objects. First, prepare an AnnData object of the dataset to be analyzed with Velorama and annotate genes that are to be analyzed as candidate regulators and candidate targets as follows. Here, ``regulator_genes`` is the set of gene symbols or IDs for the candidate regulators, while ``target_genes`` indicates the set of gene symbols or IDs for the candidate target genes. This AnnData object should be saved as ``{dataset}.h5ad``. ::
 
     adata.var['is_reg'] = [n in regulator_genes for n in adata.var.index.values]
     adata.var['is_target'] = [n in target_genes for n in adata.var.index.values]
