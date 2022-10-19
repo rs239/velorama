@@ -34,7 +34,6 @@ def train_model(config, checkpoint_dir = None):
 	lookback = config["lookback"]
 	check_every = config["check_every"]
 	verbose = config["verbose"]
-	tol = config['tol']
 	dynamics = config['dynamics']
 		
 	gc_dir = config['gc_dir']
