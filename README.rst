@@ -34,9 +34,9 @@ Velorama is currently implemented as a command line tool that operates on AnnDat
 
 The below command runs Velorama, which saves the outputs for inferring Granger causal interactions and interaction speeds to a selected directory. ::
 
-    velorama -m $method -ds $dataset -dyn $dynamics -dev $device -l $L -hd $hidden -rd $rd 
+    velorama -ds $dataset -dyn $dynamics -dev $device -l $L -hd $hidden -rd $rd 
 
-Here, ``$dataset`` is the file name of the saved AnnData object. ``$dynamics`` can be "rna_velocity" or "pseudotime", depending on which data the user desires to use to construct the DAG. ``$device`` is chosen to be either "cuda" or "cpu". ``$L`` refers to the maximum number of lags to consider. ``$hidden`` indicates the dimensionality of the hidden layers. ``$rd`` indicates the name of the root directory that contains the saved AnnData object and where the outputs will be saved. 
+Here, ``$dataset`` is the name of the dataset associated with the saved AnnData object. ``$dynamics`` can be "rna_velocity" or "pseudotime", depending on which data the user desires to use to construct the DAG. ``$device`` is chosen to be either "cuda" or "cpu". ``$L`` refers to the maximum number of lags to consider. ``$hidden`` indicates the dimensionality of the hidden layers. ``$rd`` indicates the name of the root directory that contains the saved AnnData object and where the outputs will be saved. 
 
 We encourage you to report issues at our `Github page`_ ; you can also create pull reports there to contribute your enhancements.
 If Velorama is useful for your research, please consider citing `bioRxiv (2022)`_.
