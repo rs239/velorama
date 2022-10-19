@@ -26,25 +26,23 @@ def execute_cmdline():
 	parser.add_argument('-ds','--dataset',dest='dataset',type=str)
 	parser.add_argument('-dyn','--dyn',dest='dynamics',type=str,default='pseudotime')
 	parser.add_argument('-dev','--device',dest='device',type=str,default='cpu')
-	parser.add_argument('-s','--trial_seed',dest='trial',type=int,default=0,help='random seed used for trial. set to 0,1,2 etc.')
+	parser.add_argument('-s','--seed',dest='seed',type=int,default=0,help='random seed used for trial. set to 0,1,2 etc.')
 	parser.add_argument('-lmr','--lam_ridge',dest='lam_ridge',type=float,default=0., help='Unsupported currently')
 	parser.add_argument('-p','--penalty',dest='penalty',type=str,default="H")
 	parser.add_argument('-l','--lag',dest='lag',type=int,default=5)
-	parser.add_argument('-hd', '--hidden',dest='hidden',type=int,default=16)
-	parser.add_argument('-mi','--max_iter',dest='max_iter',type=int,default=500)
+	parser.add_argument('-hd', '--hidden',dest='hidden',type=int,default=32)
+	parser.add_argument('-mi','--max_iter',dest='max_iter',type=int,default=1000)
 	parser.add_argument('-lr','--learning_rate',dest='learning_rate',type=float,default=0.0001)
 	parser.add_argument('-pr','--proba',dest='proba',type=int,default=1)
-	parser.add_argument('-tol','--tolerance',dest='tolerance',type=float,default=0.01)
 	parser.add_argument('-ce','--check_every',dest='check_every',type=int,default=100)
 	parser.add_argument('-rd','--root_dir',dest='root_dir',type=str)
-	parser.add_argument('-ls','--lam_start',dest='lam_start',type=float,default=-1)
+	parser.add_argument('-ls','--lam_start',dest='lam_start',type=float,default=-2)
 	parser.add_argument('-le','--lam_end',dest='lam_end',type=float,default=1)
 	parser.add_argument('-xn','--x_norm',dest='x_norm',type=str,default='none',choices=['none','zscore','to_count:zscore'])
 	parser.add_argument('-nl','--num_lambdas',dest='num_lambdas',type=int,default=19)
 
 	args = parser.parse_args()
 
-	data_dir = os.path.join(args.root_dir,'datasets','preprocessed')
 	gc_dir = os.path.join(args.root_dir,'results',args.dataset,'gc')
 
 	if not os.path.exists(os.path.join(args.root_dir,'results',args.dataset)):
@@ -52,7 +50,7 @@ def execute_cmdline():
 	if not os.path.exists(gc_dir):
 		os.mkdir(gc_dir)
 
-	adata = sc.read(os.path.join(data_dir,'{}.h5ad'.format(args.dataset)))
+	adata = sc.read(os.path.join(args.root_dir,'{}.h5ad'.format(args.dataset)))
 
 	if args.dynamics == 'pseudotime':
 		print('Inferring pseudotime transition matrix...')
@@ -133,7 +131,7 @@ def execute_cmdline():
 	A = torch.FloatTensor(A)
 	AX = calculate_AX(A,X,args.lag)
 
-	dir_name = '{}.trial{}.h{}.{}.lag{}.{}'.format(args.method,args.trial_seed,args.hidden,args.penalty,args.lag,args.dynamics)
+	dir_name = '{}.seed{}.h{}.{}.lag{}.{}'.format(args.method,args.seed,args.hidden,args.penalty,args.lag,args.dynamics)
 
 	if not os.path.exists(os.path.join(gc_dir,dir_name)):
 		os.mkdir(os.path.join(gc_dir,dir_name))
@@ -147,7 +145,7 @@ def execute_cmdline():
 	config = {'method': args.method,
 			  'AX': AX,
 			  'Y': Y,
-			  'trial': args.trial_seed,
+			  'trial': args.seed,
 			  'lr': args.learning_rate,
 			  'lam': tune.grid_search(lam_list),
 			  'lam_ridge': args.lam_ridge,
@@ -159,7 +157,6 @@ def execute_cmdline():
 			  'lookback': 5,
 			  'check_every': args.check_every,
 			  'verbose': True,
-			  'tol': args.tolerance,
 			  'dynamics': args.dynamics,
 			  'gc_dir': gc_dir,
 			  'dir_name': dir_name}
