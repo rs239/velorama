@@ -22,9 +22,9 @@ from .utils import *
 def execute_cmdline():
 
 	parser = argparse.ArgumentParser()
-	parser.add_argument('-m','--method',dest='method',type=str,default='baseline')
+	parser.add_argument('-n','--name',dest='name',type=str,default='velorama_run',help='substring to have in our output files')
 	parser.add_argument('-ds','--dataset',dest='dataset',type=str)
-	parser.add_argument('-dyn','--dyn',dest='dynamics',type=str,default='pseudotime')
+	parser.add_argument('-dyn','--dyn',dest='dynamics',type=str,default='pseudotime', choices=['pseudotime','rna_velocity'])
 	parser.add_argument('-dev','--device',dest='device',type=str,default='cpu')
 	parser.add_argument('-s','--seed',dest='seed',type=int,default=0,help='random seed used for trial. set to 0,1,2 etc.')
 	parser.add_argument('-lmr','--lam_ridge',dest='lam_ridge',type=float,default=0., help='Unsupported currently')
@@ -38,7 +38,7 @@ def execute_cmdline():
 	parser.add_argument('-rd','--root_dir',dest='root_dir',type=str)
 	parser.add_argument('-ls','--lam_start',dest='lam_start',type=float,default=-2)
 	parser.add_argument('-le','--lam_end',dest='lam_end',type=float,default=1)
-	parser.add_argument('-xn','--x_norm',dest='x_norm',type=str,default='none',choices=['none','zscore','to_count:zscore'])
+	parser.add_argument('-xn','--x_norm',dest='x_norm',type=str,default='zscore',choices=['none','zscore','to_count:zscore'])
 	parser.add_argument('-nl','--num_lambdas',dest='num_lambdas',type=int,default=19)
 
 	args = parser.parse_args()

@@ -1,4 +1,4 @@
-|PyPI| |Docs|
+|PyPI|
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/velorama_v5.png
    :target: https://pypi.org/project/velorama
@@ -26,7 +26,7 @@ Velorama is based on a Granger causal approach and models the differentiation la
 API Example Usage
 =================
 
-Velorama is currently implemented as a command line tool that operates on AnnData objects. First, prepare an AnnData object of the dataset to be analyzed with Velorama and annotate genes that are to be analyzed as candidate regulators and candidate targets as follows. Here, ``regulator_genes`` is the set of gene symbols or IDs for the candidate regulators, while ``target_genes`` indicates the set of gene symbols or IDs for the candidate target genes. This AnnData object should be saved as ``{dataset}.h5ad``. ::
+Velorama is currently offered as a command line tool that operates on ``AnnData`` objects. [Ed. Note: We are working on a clean API compatible with the scanpy ecosystem]. First, prepare an AnnData object of the dataset to be analyzed with Velorama. If you have RNA velocity data, make sure it is in the ``layers`` as required by `cellrank <https://cellrank.readthedocs.io/en/stable/>`_ and `scvelo <https://scvelo.readthedocs.io/>`_, so that transition probabilities can be computed. We recommend performing standard normalization: first normalize counts to the median per-cell transcript count, and then log transform the counts. Next, annotate the candidate regulators and targets you are interested in by specifying them in in ``var`` dataframe. Here ``regulator_genes`` is the set of gene symbols or IDs for the candidate regulators, while ``target_genes`` indicates the set of gene symbols or IDs for the candidate target genes. This AnnData object should be saved as ``{dataset}.h5ad``. ::
 
     adata.var['is_reg'] = [n in regulator_genes for n in adata.var.index.values]
     adata.var['is_target'] = [n in target_genes for n in adata.var.index.values]
@@ -36,7 +36,8 @@ The below command runs Velorama, which saves the outputs for inferring Granger c
 
     velorama -ds $dataset -dyn $dynamics -dev $device -l $L -hd $hidden -rd $rd 
 
-Here, ``$dataset`` is the name of the dataset associated with the saved AnnData object. ``$dynamics`` can be "rna_velocity" or "pseudotime", depending on which data the user desires to use to construct the DAG. ``$device`` is chosen to be either "cuda" or "cpu". ``$L`` refers to the maximum number of lags to consider. ``$hidden`` indicates the dimensionality of the hidden layers. ``$rd`` indicates the name of the root directory that contains the saved AnnData object and where the outputs will be saved. 
+Here, ``$dataset`` is the name of the dataset associated with the saved AnnData object. ``$dynamics`` can be "rna_velocity" or "pseudotime", depending on which data the user desires to use to construct the DAG. ``$device`` is chosen to be either "cuda" or "cpu". ``$L`` refers to the maximum number of lags to consider. ``$hidden`` indicates the dimensionality of the hidden layers. ``$rd`` indicates the name of the root directory that contains the saved AnnData object and where the outputs will be saved.
+
 
 We encourage you to report issues at our `Github page`_ ; you can also create pull reports there to contribute your enhancements.
 If Velorama is useful for your research, please consider citing `bioRxiv (2022)`_.
