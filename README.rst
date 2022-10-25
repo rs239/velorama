@@ -22,6 +22,21 @@ Velorama offers support for both pseudotime and RNA velocity data.
 
 Velorama is based on a Granger causal approach and models the differentiation landscape as a directed acyclic graph of cells, rather than as a linear ordering that previous approaches have done.
 
+=================
+API Example Usage
+=================
+
+Velorama is currently implemented as a command line tool that operates on AnnData objects. First, prepare an AnnData object of the dataset to be analyzed with Velorama and annotate genes that are to be analyzed as candidate regulators and candidate targets as follows. Here, ``regulator_genes`` is the set of gene symbols or IDs for the candidate regulators, while ``target_genes`` indicates the set of gene symbols or IDs for the candidate target genes. This AnnData object should be saved as ``{dataset}.h5ad``. ::
+
+    adata.var['is_reg'] = [n in regulator_genes for n in adata.var.index.values]
+    adata.var['is_target'] = [n in target_genes for n in adata.var.index.values]
+
+
+The below command runs Velorama, which saves the outputs for inferring Granger causal interactions and interaction speeds to a selected directory. ::
+
+    velorama -ds $dataset -dyn $dynamics -dev $device -l $L -hd $hidden -rd $rd 
+
+Here, ``$dataset`` is the name of the dataset associated with the saved AnnData object. ``$dynamics`` can be "rna_velocity" or "pseudotime", depending on which data the user desires to use to construct the DAG. ``$device`` is chosen to be either "cuda" or "cpu". ``$L`` refers to the maximum number of lags to consider. ``$hidden`` indicates the dimensionality of the hidden layers. ``$rd`` indicates the name of the root directory that contains the saved AnnData object and where the outputs will be saved. 
 
 We encourage you to report issues at our `Github page`_ ; you can also create pull reports there to contribute your enhancements.
 If Velorama is useful for your research, please consider citing `bioRxiv (2022)`_.
