@@ -50,7 +50,7 @@ def construct_dag(adata,dynamics='rna_velocity',proba=True):
 		A = construct_S(torch.FloatTensor(A))
 
 	return A
-	
+
 def construct_dag_pseudotime(joint_feature_embeddings,iroot,n_neighbors=15,pseudotime_algo='dpt'):
 	
 	"""Constructs the adjacency matrix for a DAG.
@@ -112,60 +112,122 @@ def dag_orient_edges(adjacency_matrix,pseudotime):
 	return D
 
 def construct_S(D):
-        
-    S = D.clone()
-    D_sum = D.sum(0)
-    D_sum[D_sum == 0] = 1
-    
-    S = (S/D_sum)
-    S = S.T
-    
-    return S
+		
+	S = D.clone()
+	D_sum = D.sum(0)
+	D_sum[D_sum == 0] = 1
+	
+	S = (S/D_sum)
+	S = S.T
+	
+	return S
 
 def normalize_adjacency(D):
-        
-    S = D.clone()
-    D_sum = D.sum(0)
-    D_sum[D_sum == 0] = 1
-    
-    S = (S/D_sum)
-    
-    return S
+		
+	S = D.clone()
+	D_sum = D.sum(0)
+	D_sum[D_sum == 0] = 1
+	
+	S = (S/D_sum)
+	
+	return S
 
 def seq2dag(N):
-    A = torch.zeros(N, N)
-    for i in range(N - 1):
-        A[i][i + 1] = 1
-    return A
+	A = torch.zeros(N, N)
+	for i in range(N - 1):
+		A[i][i + 1] = 1
+	return A
 
 def activation_helper(activation, dim=None):
-    if activation == 'sigmoid':
-        act = nn.Sigmoid()
-    elif activation == 'tanh':
-        act = nn.Tanh()
-    elif activation == 'relu':
-        act = nn.ReLU()
-    elif activation == 'leakyrelu':
-        act = nn.LeakyReLU()
-    elif activation is None:
-        def act(x):
-            return x
-    else:
-        raise ValueError('unsupported activation: %s' % activation)
-    return act
+	if activation == 'sigmoid':
+		act = nn.Sigmoid()
+	elif activation == 'tanh':
+		act = nn.Tanh()
+	elif activation == 'relu':
+		act = nn.ReLU()
+	elif activation == 'leakyrelu':
+		act = nn.LeakyReLU()
+	elif activation is None:
+		def act(x):
+			return x
+	else:
+		raise ValueError('unsupported activation: %s' % activation)
+	return act
 
 def calculate_AX(A,X,lag):
 
-    if A == "linear":
-        A = seq2dag(X.shape[1])
-    S = construct_S(A)
+	if A == "linear":
+		A = seq2dag(X.shape[1])
+	S = construct_S(A)
 
-    ax = []
-    cur = S
-    for _ in range(lag):
-        ax.append(torch.matmul(cur, X))
-        cur = torch.matmul(S, cur)
-        for i in range(len(cur)):
-            cur[i][i] = 0
+	ax = []
+	cur = S
+	for _ in range(lag):
+		ax.append(torch.matmul(cur, X))
+		cur = torch.matmul(S, cur)
+		for i in range(len(cur)):
+			cur[i][i] = 0
 
-    return torch.stack(ax)
+	return torch.stack(ax)
+
+def load_gc_interactions(name,root_dir,lam_list,hidden_dim=16,lag=5,penalty='H',
+						 dynamics='rna_velocity',seed=0,ignore_lag=False):
+	
+	config_name = '{}.seed{}.h{}.{}.lag{}.{}'.format(name,seed,hidden_dim,penalty,lag,dynamics)
+
+	all_lags = []
+	for lam in lam_list:
+		if ignore_lag:
+			file_name = '{}.seed{}.lam{}.h{}.{}.lag{}.{}.ignore_lag.pt'.format(name,seed,lam,hidden_dim,penalty,lag,dynamics)
+			file_path = os.path.join(root_dir,'results',config_name,file_name)
+			gc_lag = torch.load(file_path)
+			gc_lag = gc_lag.unsqueeze(-1)
+		else:
+			file_name = '{}.seed{}.lam{}.h{}.{}.lag{}.{}.pt'.format(name,seed,lam,hidden_dim,penalty,lag,dynamics)
+			file_path = os.path.join(root_dir,'results',config_name,file_name)
+			gc_lag = torch.load(file_path)
+		all_lags.append(gc_lag.detach())
+
+	all_lags = torch.stack(all_lags)
+
+	return all_lags
+
+def lor(x, y):
+	return x + y
+
+def estimate_interactions(all_lags,lag=5,lower_thresh=0.01,upper_thresh=0.95):
+	
+	gc = torch.swapaxes(all_lags,-1,1)
+
+	rgc = []
+	for i in range(lag):
+		rmats = []
+		for j in range(len(gc)):
+			pnzero = (gc[j][i] > 1e-8).float().mean()
+			if pnzero >= lower_thresh and pnzero <= upper_thresh:
+				rmats.append(gc[j][i])
+		rgc.append(rmats)
+
+	fgc = torch.zeros(gc.shape[2:])
+	for l in range(lag):
+		if len(rgc[l]):
+			fgc = lor(fgc, rgc[l][0])
+	
+	return fgc.T
+
+def estimate_lags(all_lags,lag,thresh=1e-8,lower_thresh=0.01,upper_thresh=0.95):
+	
+	softmax = nn.Softmax(dim=-1)
+
+	# consider only lambda values resulting GC matrices with between 1% and 95% non-zero values
+	inds2keep = [i for i,gc in enumerate(all_lags) if 
+				 (torch.norm(gc,dim=-1) > thresh).float().mean() <= upper_thresh and
+				 (torch.norm(gc,dim=-1) > thresh).float().mean() >= lower_thresh]
+	mats = (abs(all_lags[inds2keep]) > thresh).float() 
+		
+	for i in range(len(mats) - 2, -1, -1):
+		mats[i] = lor(mats[i], mats[i + 1])
+	bin_lags = abs(torch.FloatTensor(mats[0]))
+
+	bin_lags = softmax(bin_lags)
+	return (bin_lags[:,:,[lag-1]].mean(-1)-bin_lags[:,:,[0]].mean(-1)).squeeze()

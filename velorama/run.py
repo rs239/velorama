@@ -14,6 +14,7 @@ import ray
 from ray import tune
 import statistics
 import scvelo as scv
+import pandas as pd
 
 from .models import *
 from .train import *
@@ -44,14 +45,13 @@ def execute_cmdline():
 
 	args = parser.parse_args()
 
-	gc_dir = os.path.join(args.root_dir,'results',args.dataset,'gc')
-
-	if not os.path.exists(os.path.join(args.root_dir,'results',args.dataset)):
-		os.mkdir(os.path.join(args.root_dir,'results',args.dataset))
-	if not os.path.exists(gc_dir):
-		os.mkdir(gc_dir)
+	results_dir = os.path.join(args.root_dir,'results')
+	if not os.path.exists(results_dir):
+		os.mkdir(results_dir)
 
 	adata = sc.read(os.path.join(args.root_dir,'{}.h5ad'.format(args.dataset)))
+	target_genes = adata.var.index.values[adata.var['is_target']]
+	reg_genes = adata.var.index.values[adata.var['is_reg']]
 
 	if args.x_norm == 'zscore':
 
@@ -87,28 +87,27 @@ def execute_cmdline():
 		X = torch.FloatTensor(adata[:,adata.var['is_reg']].X.toarray())
 		Y = torch.FloatTensor(adata[:,adata.var['is_target']].X.toarray())
 
-	A = construct_dag(adata,dynamics=args.dynamics,proba=args.proba)
-
 	print('# of Regs: {}, # of Targets: {}'.format(X.shape[1],Y.shape[1]))
 
-	print('Performing diffusion...')
+	print('Constructing DAG...')
+	A = construct_dag(adata,dynamics=args.dynamics,proba=args.proba)
 	A = torch.FloatTensor(A)
 	AX = calculate_AX(A,X,args.lag)
 
-	dir_name = '{}.seed{}.h{}.{}.lag{}.{}'.format(args.method,args.seed,args.hidden,args.penalty,args.lag,args.dynamics)
+	dir_name = '{}.seed{}.h{}.{}.lag{}.{}'.format(args.name,args.seed,args.hidden,args.penalty,args.lag,args.dynamics)
 
-	if not os.path.exists(os.path.join(gc_dir,dir_name)):
-		os.mkdir(os.path.join(gc_dir,dir_name))
+	if not os.path.exists(os.path.join(results_dir,dir_name)):
+		os.mkdir(os.path.join(results_dir,dir_name))
 
 	ray.init(object_store_memory=10**9)
 
 	total_start = time.time()
 	lam_list = np.round(np.logspace(args.lam_start, args.lam_end, num=args.num_lambdas),4).tolist()
 
-	config = {'method': args.method,
+	config = {'name': args.name,
 			  'AX': AX,
 			  'Y': Y,
-			  'trial': args.seed,
+			  'seed': args.seed,
 			  'lr': args.learning_rate,
 			  'lam': tune.grid_search(lam_list),
 			  'lam_ridge': args.lam_ridge,
@@ -121,15 +120,28 @@ def execute_cmdline():
 			  'check_every': args.check_every,
 			  'verbose': True,
 			  'dynamics': args.dynamics,
-			  'gc_dir': gc_dir,
+			  'results_dir': results_dir,
 			  'dir_name': dir_name}
 
 	resources_per_trial = {"cpu": 1, "gpu": 0.2, "memory": 2 * 1024 * 1024 * 1024}
 	analysis = tune.run(train_model,resources_per_trial=resources_per_trial,config=config,
 						local_dir=os.path.join(args.root_dir,'results'))
 	
+	# aggregate results
+	all_lags = load_gc_interactions(args.name,args.root_dir,lam_list,hidden_dim=args.hidden,
+									lag=args.lag,penalty=args.penalty,
+						 			dynamics=args.dynamics,seed=args.seed,ignore_lag=False)
+
+	gc_mat = estimate_interactions(all_lags,lag=args.lag)
+	gc_df = pd.DataFrame(gc_mat.cpu().data.numpy(),index=target_genes,columns=reg_genes)
+	gc_df.to_csv(os.path.join(results_dir,'velorama.interactions.tsv'),sep='\t')
+
+	lag_mat = estimate_lags(all_lags,lag=args.lag)
+	lag_df = pd.DataFrame(lag_mat.cpu().data.numpy(),index=target_genes,columns=reg_genes)
+	lag_df.to_csv(os.path.join(results_dir,'velorama.lags.tsv'),sep='\t')
+
 	print('Total time:',time.time()-total_start)
-	np.savetxt(os.path.join(gc_dir,dir_name + '.time.txt'),np.array([time.time()-total_start]))
+	np.savetxt(os.path.join(results_dir,dir_name + '.time.txt'),np.array([time.time()-total_start]))
 
 if __name__ == "__main__":
 	execute_cmdline()

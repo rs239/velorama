@@ -20,9 +20,9 @@ def train_model(config, checkpoint_dir = None):
 	AX = config["AX"]
 	Y = config["Y"]
 
-	method = config["method"]
+	name = config["name"]
 
-	trial_no = config["trial"]
+	seed = config["seed"]
 	lr = config["lr"]
 	lam = config["lam"]
 	lam_ridge = config["lam_ridge"]
@@ -36,17 +36,17 @@ def train_model(config, checkpoint_dir = None):
 	verbose = config["verbose"]
 	dynamics = config['dynamics']
 		
-	gc_dir = config['gc_dir']
+	results_dir = config['results_dir']
 	dir_name = config['dir_name']
 
-	np.random.seed(trial_no)
-	torch.manual_seed(trial_no)
+	np.random.seed(seed)
+	torch.manual_seed(seed)
 
 
-	file_name = '{}.trial{}.lam{}.ridge{}.h{}.{}.lag{}.{}'.format(method,trial_no,lam,
-				lam_ridge,hidden[0],penalty,lag,dynamics)
-	gc_path1 = os.path.join(gc_dir,dir_name,file_name + '.pt')
-	gc_path2 = os.path.join(gc_dir,dir_name,file_name + '.ignore_lag.pt')
+	file_name = '{}.seed{}.lam{}.h{}.{}.lag{}.{}'.format(name,seed,lam,
+				hidden[0],penalty,lag,dynamics)
+	gc_path1 = os.path.join(results_dir,dir_name,file_name + '.pt')
+	gc_path2 = os.path.join(results_dir,dir_name,file_name + '.ignore_lag.pt')
 
 	if not os.path.exists(gc_path1) and not os.path.exists(gc_path2):
 		
@@ -58,13 +58,9 @@ def train_model(config, checkpoint_dir = None):
 
 		AX = AX.to(device)
 		Y = Y.to(device)
-
-		#if torch.cuda.device_count() > 1:
-		#    vmlp = nn.DataParallel(vmlp)
 			
 		'''Train model with ISTA.'''
 		lag = vmlp.lag
-		# p = Y.shape[1]
 		loss_fn = nn.MSELoss(reduction='none')
 		train_loss_list = []
 
@@ -75,7 +71,6 @@ def train_model(config, checkpoint_dir = None):
 
 		# Calculate smooth error.
 		loss = loss_fn(vmlp(AX),Y).mean(0).sum()
-		# loss = sum([loss_fn(vmlp.networks[i](AX), Y[:,i]) for i in range(Y.shape[1])])
 
 		ridge = torch.sum(torch.stack([ridge_regularize(net, lam_ridge) for net in vmlp.networks]))
 		smooth = loss + ridge
@@ -106,7 +101,6 @@ def train_model(config, checkpoint_dir = None):
 
 			# Calculate loss for next iteration.
 			loss = loss_fn(vmlp(AX),Y).mean(0).sum()
-			# loss = sum([loss_fn(vmlp.networks[i](AX), Y[:,i]) for i in range(Y.shape[1])])
 			ridge = torch.sum(torch.stack([ridge_regularize(net, lam_ridge) for net in vmlp.networks]))
 			smooth = loss + ridge
 
@@ -139,18 +133,17 @@ def train_model(config, checkpoint_dir = None):
 		# Restore best model.
 		restore_parameters(vmlp, best_model)
 
+		if not os.path.exists(results_dir):
+			os.mkdir(results_dir)
+		if not os.path.exists(os.path.join(results_dir,dir_name)):
+			os.mkdir(os.path.join(results_dir,dir_name))
 
-		if not os.path.exists(gc_dir):
-			os.mkdir(gc_dir)
-		if not os.path.exists(os.path.join(gc_dir,dir_name)):
-			os.mkdir(os.path.join(gc_dir,dir_name))
-
-		file_name = '{}.trial{}.lam{}.ridge{}.h{}.{}.lag{}.{}'.format(method,trial_no,lam,
-					lam_ridge,hidden[0],penalty,lag,dynamics)
+		file_name = '{}.seed{}.lam{}.h{}.{}.lag{}.{}'.format(name,seed,lam,
+					hidden[0],penalty,lag,dynamics)
 		GC_lag = vmlp.GC(threshold=False, ignore_lag=False).cpu()
-		torch.save(GC_lag, os.path.join(gc_dir,dir_name,file_name + '.pt'))
+		torch.save(GC_lag, os.path.join(results_dir,dir_name,file_name + '.pt'))
 
 		GC_lag = vmlp.GC(threshold=False, ignore_lag=True).cpu()
-		torch.save(GC_lag, os.path.join(gc_dir,dir_name,file_name + '.ignore_lag.pt'))
+		torch.save(GC_lag, os.path.join(results_dir,dir_name,file_name + '.ignore_lag.pt'))
 
 
