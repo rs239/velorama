@@ -12,8 +12,8 @@ import torch.nn as nn
 from copy import deepcopy
 import time
 
-from models import *
-from utils import *
+from .models import *
+from .utils import *
 
 def train_model(config, checkpoint_dir = None):
 

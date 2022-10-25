@@ -12,7 +12,46 @@ from cellrank.tl.kernels import VelocityKernel
 import torch
 import torch.nn as nn
 
-def construct_dag(joint_feature_embeddings,iroot,n_neighbors=15,pseudotime_algo='dpt'):
+
+def construct_dag(adata,dynamics='rna_velocity',proba=True):
+	if dynamics == 'pseudotime':
+		sc.tl.pca(adata, svd_solver='arpack')
+		A = construct_dag_pseudotime(adata.obsm['X_pca'], adata.uns['iroot'])
+		A = A.T
+		A = construct_S(torch.FloatTensor(A))
+
+	elif dynamics == 'rna_velocity':
+		scv.pp.moments(adata, n_pcs=30, n_neighbors=30)
+		scv.tl.velocity(adata)
+		scv.tl.velocity_graph(adata)
+		vk = VelocityKernel(adata).compute_transition_matrix()
+		A = vk.transition_matrix
+		A = A.toarray()
+		for i in range(len(A)):
+			for j in range(len(A)):
+				if A[i][j] > 0 and A[j][i] > 0 and A[i][j] > A[j][i]:
+					A[j][i] = 0
+
+		# if proba is False (0), it won't use the probabilistic 
+		# transition matrix
+		if not proba:
+			for i in range(len(A)):
+				nzeros = []
+				for j in range(len(A)):
+					if A[i][j] > 0:
+						nzeros.append(A[i][j])
+				m = statistics.median(nzeros)
+				for j in range(len(A)):
+					if A[i][j] < m:
+						A[i][j] = 0
+					else:
+						A[i][j] = 1
+
+		A = construct_S(torch.FloatTensor(A))
+
+	return A
+	
+def construct_dag_pseudotime(joint_feature_embeddings,iroot,n_neighbors=15,pseudotime_algo='dpt'):
 	
 	"""Constructs the adjacency matrix for a DAG.
 	Parameters
@@ -92,38 +131,6 @@ def normalize_adjacency(D):
     S = (S/D_sum)
     
     return S
-
-def load_multiome_data(data_dir,dataset,sampling=None,preprocess=True):
-
-	if sampling == 'geosketch':
-		atac_adata = sc.read(os.path.join(data_dir,
-			'{}.atac.sketch.h5ad'.format(dataset)))
-		rna_adata = sc.read(os.path.join(data_dir,
-			'{}.rna.sketch.h5ad'.format(dataset)))
-	elif sampling == 'uniform':
-		atac_adata = sc.read(os.path.join(data_dir,
-			'{}.atac.uniform.h5ad'.format(dataset)))
-		rna_adata = sc.read(os.path.join(data_dir,
-			'{}.rna.uniform.h5ad'.format(dataset)))
-	else:
-		atac_adata = sc.read(os.path.join(data_dir,
-			'{}.atac.h5ad'.format(dataset)))
-		rna_adata = sc.read(os.path.join(data_dir,
-			'{}.rna.h5ad'.format(dataset)))
-
-	if preprocess:
-
-		# scale by maximum 
-		# (rna already normalized by library size + log-transformed)
-		X_max = rna_adata.X.max(0).toarray().squeeze()
-		X_max[X_max == 0] = 1
-		rna_adata.X = csr_matrix(rna_adata.X / X_max)
-
-		# atac: normalize library size + log transformation
-		sc.pp.normalize_total(atac_adata,target_sum=1e4)
-		sc.pp.log1p(atac_adata)
-
-	return rna_adata,atac_adata
 
 def seq2dag(N):
     A = torch.zeros(N, N)
