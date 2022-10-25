@@ -19,6 +19,7 @@ from models import *
 from train import *
 from utils import *
 
+
 def execute_cmdline():
 
 	parser = argparse.ArgumentParser()
@@ -26,15 +27,15 @@ def execute_cmdline():
 	parser.add_argument('-ds','--dataset',dest='dataset',type=str)
 	parser.add_argument('-dyn','--dyn',dest='dynamics',type=str,default='pseudotime')
 	parser.add_argument('-dev','--device',dest='device',type=str,default='cpu')
-	parser.add_argument('-s','--seed',dest='seed',type=int,default=0,help='random seed used for trial. set to 0,1,2 etc.')
-	parser.add_argument('-lmr','--lam_ridge',dest='lam_ridge',type=float,default=0., help='Unsupported currently')
+	parser.add_argument('-s','--seed',dest='seed',type=int,default=0,help='Random seed. Set to 0,1,2 etc.')
+	parser.add_argument('-lmr','--lam_ridge',dest='lam_ridge',type=float,default=0., help='Currenty unsupported')
 	parser.add_argument('-p','--penalty',dest='penalty',type=str,default="H")
 	parser.add_argument('-l','--lag',dest='lag',type=int,default=5)
 	parser.add_argument('-hd', '--hidden',dest='hidden',type=int,default=32)
 	parser.add_argument('-mi','--max_iter',dest='max_iter',type=int,default=1000)
 	parser.add_argument('-lr','--learning_rate',dest='learning_rate',type=float,default=0.0001)
 	parser.add_argument('-pr','--proba',dest='proba',type=int,default=1)
-	parser.add_argument('-ce','--check_every',dest='check_every',type=int,default=100)
+	parser.add_argument('-ce','--check_every',dest='check_every',type=int,default=10)
 	parser.add_argument('-rd','--root_dir',dest='root_dir',type=str)
 	parser.add_argument('-ls','--lam_start',dest='lam_start',type=float,default=-2)
 	parser.add_argument('-le','--lam_end',dest='lam_end',type=float,default=1)
@@ -51,44 +52,6 @@ def execute_cmdline():
 		os.mkdir(gc_dir)
 
 	adata = sc.read(os.path.join(args.root_dir,'{}.h5ad'.format(args.dataset)))
-
-	if args.dynamics == 'pseudotime':
-		print('Inferring pseudotime transition matrix...')
-		sc.tl.pca(adata, svd_solver='arpack')
-		A = construct_dag(adata.obsm['X_pca'], adata.uns['iroot'])
-		A = A.T
-		A = construct_S(torch.FloatTensor(A))
-
-	elif args.dynamics == 'rna_velocity':
-		print('Inferring RNA velocity transition matrix...')
-
-		scv.pp.moments(adata, n_pcs=30, n_neighbors=30)
-		scv.tl.velocity(adata)
-		scv.tl.velocity_graph(adata)
-		vk = VelocityKernel(adata).compute_transition_matrix()
-		A = vk.transition_matrix
-		A = A.toarray()
-		for i in range(len(A)):
-			for j in range(len(A)):
-				if A[i][j] > 0 and A[j][i] > 0 and A[i][j] > A[j][i]:
-					A[j][i] = 0
-
-		# if proba is False (0), it won't use the probabilistic 
-		# transition matrix
-		if not args.proba:
-			for i in range(len(A)):
-				nzeros = []
-				for j in range(len(A)):
-					if A[i][j] > 0:
-						nzeros.append(A[i][j])
-				m = statistics.median(nzeros)
-				for j in range(len(A)):
-					if A[i][j] < m:
-						A[i][j] = 0
-					else:
-						A[i][j] = 1
-
-		A = construct_S(torch.FloatTensor(A))
 
 	if args.x_norm == 'zscore':
 
@@ -124,6 +87,7 @@ def execute_cmdline():
 		X = torch.FloatTensor(adata[:,adata.var['is_reg']].X.toarray())
 		Y = torch.FloatTensor(adata[:,adata.var['is_target']].X.toarray())
 
+	A = construct_dag(adata,dynamics=args.dynamics,proba=args.proba)
 
 	print('# of Regs: {}, # of Targets: {}'.format(X.shape[1],Y.shape[1]))
 
@@ -140,7 +104,6 @@ def execute_cmdline():
 
 	total_start = time.time()
 	lam_list = np.round(np.logspace(args.lam_start, args.lam_end, num=args.num_lambdas),4).tolist()
-	# lam_list = sorted(list(set(lam_list)))
 
 	config = {'method': args.method,
 			  'AX': AX,
