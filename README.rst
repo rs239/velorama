@@ -31,6 +31,7 @@ Velorama is currently offered as a command line tool that operates on ``AnnData`
     adata.var['is_reg'] = [n in regulator_genes for n in adata.var.index.values]
     adata.var['is_target'] = [n in target_genes for n in adata.var.index.values]
 
+Here is an example dataset: `mouse endocrinogenesis <http://cb.csail.mit.edu/cb/velorama/datasets/endocrinogenesis_day15.5.h5ad>`_. This dataset is from the scVelo vignette and is based on the study by `Bergen et al. (2020) <https://www.nature.com/articles/s41587-020-0591-3>`_.
 
 The below command runs Velorama, which saves the inferred Granger causal interactions and interaction speeds to a given directory. ::
 
