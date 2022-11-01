@@ -2,6 +2,9 @@
 Velorama - Gene regulatory network inference for RNA velocity and pseudotime data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. image:: http://cb.csail.mit.edu/cb/velorama/velorama_v5.png
+   :width: 600
+
 Velorama is a Python library for inferring gene regulatory networks from single-cell RNA-seq data
 
 **It is designed for the case where RNA velocity or pseudotime data is available.**
