@@ -1,6 +1,6 @@
 |PyPI|
 
-.. |PyPI| image:: https://img.shields.io/pypi/v/velorama_v5.png
+.. |PyPI| 
    :target: https://pypi.org/project/velorama
 
 
