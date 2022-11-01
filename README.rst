@@ -1,9 +1,3 @@
-|PyPI|
-
-.. |PyPI| 
-   :target: https://pypi.org/project/velorama
-
-
 
 Velorama - Gene regulatory network inference for RNA velocity and pseudotime data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
