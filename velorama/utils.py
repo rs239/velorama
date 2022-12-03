@@ -15,6 +15,10 @@ from cellrank.tl.kernels import VelocityKernel
 import torch
 import torch.nn as nn
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 9497b38cef7a7a374c99acc73d2a279ea357db68
 def construct_dag(adata,dynamics='rna_velocity',proba=True):
 	if dynamics == 'pseudotime':
 		sc.tl.pca(adata, svd_solver='arpack')
@@ -29,6 +33,13 @@ def construct_dag(adata,dynamics='rna_velocity',proba=True):
 		vk = VelocityKernel(adata).compute_transition_matrix()
 		A = vk.transition_matrix
 		A = A.toarray()
+<<<<<<< HEAD
+=======
+		for i in range(len(A)):
+			for j in range(len(A)):
+				if A[i][j] > 0 and A[j][i] > 0 and A[i][j] > A[j][i]:
+					A[j][i] = 0
+>>>>>>> 9497b38cef7a7a374c99acc73d2a279ea357db68
 
 		# if proba is False (0), it won't use the probabilistic 
 		# transition matrix
@@ -45,11 +56,14 @@ def construct_dag(adata,dynamics='rna_velocity',proba=True):
 					else:
 						A[i][j] = 1
 
+<<<<<<< HEAD
 		for i in range(len(A)):
 			for j in range(len(A)):
 				if A[i][j] > 0 and A[j][i] > 0 and A[i][j] > A[j][i]:
 					A[j][i] = 0
 
+=======
+>>>>>>> 9497b38cef7a7a374c99acc73d2a279ea357db68
 		A = construct_S(torch.FloatTensor(A))
 
 	return A
@@ -161,18 +175,32 @@ def calculate_AX(A,X,lag):
 
 	if A == "linear":
 		A = seq2dag(X.shape[1])
+<<<<<<< HEAD
 
 	ax = []
 	cur = A
 	for _ in range(lag):
 		ax.append(torch.matmul(cur, X))
 		cur = torch.matmul(A, cur)
+=======
+	S = construct_S(A)
+
+	ax = []
+	cur = S
+	for _ in range(lag):
+		ax.append(torch.matmul(cur, X))
+		cur = torch.matmul(S, cur)
+>>>>>>> 9497b38cef7a7a374c99acc73d2a279ea357db68
 		for i in range(len(cur)):
 			cur[i][i] = 0
 
 	return torch.stack(ax)
 
+<<<<<<< HEAD
 def load_gc_interactions(name,results_dir,lam_list,hidden_dim=16,lag=5,penalty='H',
+=======
+def load_gc_interactions(name,root_dir,lam_list,hidden_dim=16,lag=5,penalty='H',
+>>>>>>> 9497b38cef7a7a374c99acc73d2a279ea357db68
 						 dynamics='rna_velocity',seed=0,ignore_lag=False):
 	
 	config_name = '{}.seed{}.h{}.{}.lag{}.{}'.format(name,seed,hidden_dim,penalty,lag,dynamics)
@@ -181,16 +209,25 @@ def load_gc_interactions(name,results_dir,lam_list,hidden_dim=16,lag=5,penalty='
 	for lam in lam_list:
 		if ignore_lag:
 			file_name = '{}.seed{}.lam{}.h{}.{}.lag{}.{}.ignore_lag.pt'.format(name,seed,lam,hidden_dim,penalty,lag,dynamics)
+<<<<<<< HEAD
 			file_path = os.path.join(results_dir,config_name,file_name)
+=======
+			file_path = os.path.join(root_dir,'results',config_name,file_name)
+>>>>>>> 9497b38cef7a7a374c99acc73d2a279ea357db68
 			gc_lag = torch.load(file_path)
 			gc_lag = gc_lag.unsqueeze(-1)
 		else:
 			file_name = '{}.seed{}.lam{}.h{}.{}.lag{}.{}.pt'.format(name,seed,lam,hidden_dim,penalty,lag,dynamics)
+<<<<<<< HEAD
 			file_path = os.path.join(results_dir,config_name,file_name)
+=======
+			file_path = os.path.join(root_dir,'results',config_name,file_name)
+>>>>>>> 9497b38cef7a7a374c99acc73d2a279ea357db68
 			gc_lag = torch.load(file_path)
 		all_lags.append(gc_lag.detach())
 
 	all_lags = torch.stack(all_lags)
+<<<<<<< HEAD
 
 	return all_lags
 
@@ -209,6 +246,33 @@ def estimate_interactions(all_lags,lag=5,lower_thresh=0.01,upper_thresh=0.95):
 				interactions = all_lags[i,:,:,j]
 				all_interactions.append(interactions)
 	return torch.stack(all_interactions).mean(0)
+=======
+
+	return all_lags
+
+def lor(x, y):
+	return x + y
+
+def estimate_interactions(all_lags,lag=5,lower_thresh=0.01,upper_thresh=0.95):
+	
+	gc = torch.swapaxes(all_lags,-1,1)
+
+	rgc = []
+	for i in range(lag):
+		rmats = []
+		for j in range(len(gc)):
+			pnzero = (gc[j][i] > 1e-8).float().mean()
+			if pnzero >= lower_thresh and pnzero <= upper_thresh:
+				rmats.append(gc[j][i])
+		rgc.append(rmats)
+
+	fgc = torch.zeros(gc.shape[2:])
+	for l in range(lag):
+		if len(rgc[l]):
+			fgc = lor(fgc, rgc[l][0])
+	
+	return fgc.T
+>>>>>>> 9497b38cef7a7a374c99acc73d2a279ea357db68
 
 def estimate_lags(all_lags,lag,thresh=1e-8,lower_thresh=0.01,upper_thresh=0.95):
 	
