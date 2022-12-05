@@ -11,11 +11,7 @@
 import torch
 import torch.nn as nn
 
-<<<<<<< HEAD
 from utils import activation_helper
-=======
-from .utils import activation_helper
->>>>>>> 9497b38cef7a7a374c99acc73d2a279ea357db68
 
 class MLP(nn.Module):
 

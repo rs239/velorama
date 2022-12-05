@@ -12,8 +12,8 @@ import torch.nn as nn
 from copy import deepcopy
 import time
 
-from .models import *
-from .utils import *
+from models import *
+from utils import *
 
 def train_model(config, checkpoint_dir = None):
 
@@ -137,7 +137,6 @@ def train_model(config, checkpoint_dir = None):
 			os.mkdir(results_dir)
 		if not os.path.exists(os.path.join(results_dir,dir_name)):
 			os.mkdir(os.path.join(results_dir,dir_name))
-<<<<<<< HEAD
 
 		file_name = '{}.seed{}.lam{}.h{}.{}.lag{}.{}'.format(name,seed,lam,
 					hidden[0],penalty,lag,dynamics)
@@ -271,10 +270,6 @@ def train_model_new(config, checkpoint_dir = None):
 			os.mkdir(os.path.join(results_dir,dir_name))
 
 		file_name = '{}.seed{}.lam{}.h{}.{}.lag{}.{}'.format(name,seed,np.round(lam,4),
-=======
-
-		file_name = '{}.seed{}.lam{}.h{}.{}.lag{}.{}'.format(name,seed,lam,
->>>>>>> 9497b38cef7a7a374c99acc73d2a279ea357db68
 					hidden[0],penalty,lag,dynamics)
 		GC_lag = vmlp.GC(threshold=False, ignore_lag=False).cpu()
 		torch.save(GC_lag, os.path.join(results_dir,dir_name,file_name + '.pt'))
