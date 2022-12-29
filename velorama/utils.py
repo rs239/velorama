@@ -9,22 +9,42 @@ import scanpy.external as sce
 from anndata import AnnData
 import cellrank as cr
 import scvelo as scv
+import schema
+from torch.nn.functional import normalize
 
 from cellrank.tl.kernels import VelocityKernel
 
 import torch
 import torch.nn as nn
 
-def construct_dag(adata,dynamics='rna_velocity',proba=True):
+def construct_dag(adata,dynamics='rna_velocity',proba=True,n_neighbors=30,
+	 			  velo_mode='stochastic',n_comps=50,use_time=False):
+
+	sc.tl.pca(adata, n_comps=n_comps, svd_solver='arpack')
+	if use_time:
+		sqp = schema.SchemaQP(min_desired_corr=0.9,mode='affine',
+							  params= {'decomposition_model': 'pca', 
+							  'num_top_components': adata.obsm['X_pca'].shape[1]})
+		adata.obsm['X_rep'] = sqp.fit_transform(adata.obsm['X_pca'],[adata.obs['time']],
+                           ['numeric'],[1])
+	else:
+		adata.obsm['X_rep'] = adata.obsm['X_pca']
+
 	if dynamics == 'pseudotime':
-		sc.tl.pca(adata, svd_solver='arpack')
-		A = construct_dag_pseudotime(adata.obsm['X_pca'], adata.uns['iroot'])
-		A = A.T
-		A = construct_S(torch.FloatTensor(A))
+		A = construct_dag_pseudotime(adata.obsm['X_rep'],adata.uns['iroot'],
+									 n_neighbors=n_neighbors).T
+
+	elif dynamics == 'pseudotime_precomputed':
+		A = construct_dag_pseudotime(adata.obsm['X_rep'],adata.uns['iroot'],
+									 n_neighbors=n_neighbors,
+									 pseudotime_algo='precomputed',
+									 precomputed_pseudotime=adata.obs['pseudotime'].values).T
 
 	elif dynamics == 'rna_velocity':
-		scv.pp.moments(adata, n_pcs=30, n_neighbors=30)
-		scv.tl.velocity(adata)
+		scv.pp.moments(adata, n_neighbors=n_neighbors, use_rep='X_rep')
+		if velo_mode == 'dynamical':
+			scv.tl.recover_dynamics(adata)
+		scv.tl.velocity(adata,mode=velo_mode)
 		scv.tl.velocity_graph(adata)
 		vk = VelocityKernel(adata).compute_transition_matrix()
 		A = vk.transition_matrix
@@ -50,11 +70,12 @@ def construct_dag(adata,dynamics='rna_velocity',proba=True):
 				if A[i][j] > 0 and A[j][i] > 0 and A[i][j] > A[j][i]:
 					A[j][i] = 0
 
-		A = construct_S(torch.FloatTensor(A))
+	A = construct_S(torch.FloatTensor(A))
 
 	return A
 
-def construct_dag_pseudotime(joint_feature_embeddings,iroot,n_neighbors=15,pseudotime_algo='dpt'):
+def construct_dag_pseudotime(joint_feature_embeddings,iroot,n_neighbors=15,pseudotime_algo='dpt',
+							 precomputed_pseudotime=None):
 	
 	"""Constructs the adjacency matrix for a DAG.
 	Parameters
@@ -77,12 +98,14 @@ def construct_dag_pseudotime(joint_feature_embeddings,iroot,n_neighbors=15,pseud
 	"""
 
 	pseudotime,knn_graph = infer_knngraph_pseudotime(joint_feature_embeddings,iroot,
-		n_neighbors=n_neighbors,pseudotime_algo=pseudotime_algo)
+		n_neighbors=n_neighbors,pseudotime_algo=pseudotime_algo,
+		precomputed_pseudotime=precomputed_pseudotime)
 	dag_adjacency_matrix = dag_orient_edges(knn_graph,pseudotime)
 
 	return dag_adjacency_matrix
 
-def infer_knngraph_pseudotime(joint_feature_embeddings,iroot,n_neighbors=15,pseudotime_algo='dpt'):
+def infer_knngraph_pseudotime(joint_feature_embeddings,iroot,n_neighbors=15,pseudotime_algo='dpt',
+							  precomputed_pseudotime=None):
 
 	adata = AnnData(joint_feature_embeddings)
 	adata.obsm['X_joint'] = joint_feature_embeddings
@@ -93,6 +116,11 @@ def infer_knngraph_pseudotime(joint_feature_embeddings,iroot,n_neighbors=15,pseu
 		sc.tl.dpt(adata)
 		adata.obs['pseudotime'] = adata.obs['dpt_pseudotime'].values
 		knn_graph = adata.obsp['distances'].astype(bool).astype(float)
+	elif pseudotime_algo == 'precomputed':
+		sc.pp.neighbors(adata,use_rep='X_joint',n_neighbors=n_neighbors)
+		adata.obs['pseudotime'] = precomputed_pseudotime
+		knn_graph = adata.obsp['distances'].astype(bool).astype(float)
+
 	elif pseudotime_algo == 'palantir':
 		sc.pp.neighbors(adata,use_rep='X_joint',n_neighbors=n_neighbors)
 		sce.tl.palantir(adata, knn=n_neighbors,use_adjacency_matrix=True,
@@ -157,7 +185,7 @@ def activation_helper(activation, dim=None):
 		raise ValueError('unsupported activation: %s' % activation)
 	return act
 
-def calculate_AX(A,X,lag):
+def calculate_diffusion_lags(A,X,lag):
 
 	if A == "linear":
 		A = seq2dag(X.shape[1])
@@ -197,7 +225,8 @@ def load_gc_interactions(name,results_dir,lam_list,hidden_dim=16,lag=5,penalty='
 def lor(x, y):
 	return x + y
 
-def estimate_interactions(all_lags,lag=5,lower_thresh=0.01,upper_thresh=0.95):
+def estimate_interactions(all_lags,lag=5,lower_thresh=0.01,upper_thresh=0.95,
+						  binarize=False,l2_norm=False):
 
 	all_interactions = []
 	for i in range(len(all_lags)):
@@ -207,6 +236,12 @@ def estimate_interactions(all_lags,lag=5,lower_thresh=0.01,upper_thresh=0.95):
 
 			if nnz_percent > lower_thresh and nnz_percent < upper_thresh:
 				interactions = all_lags[i,:,:,j]
+
+				if l2_norm:
+					interactions = normalize(interactions,dim=(0,1))
+				if binarize:
+					interactions = (interactions != 0).float()
+
 				all_interactions.append(interactions)
 	return torch.stack(all_interactions).mean(0)
 
