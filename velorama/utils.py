@@ -17,8 +17,40 @@ from cellrank.tl.kernels import VelocityKernel
 import torch
 import torch.nn as nn
 
-def construct_dag(adata,dynamics='rna_velocity',proba=True,n_neighbors=30,
-	 			  velo_mode='stochastic',n_comps=50,use_time=False):
+def construct_dag(adata,dynamics='rna_velocity',velo_mode='stochastic',proba=True,
+				  n_neighbors=30,n_comps=50,use_time=False):
+
+	"""Constructs the adjacency matrix for a DAG.
+	Parameters
+	----------
+	adata: 'AnnData'
+		AnnData object with rows corresponding to cells and columns corresponding 
+		to genes.
+	dynamics: {'rna_velocity','pseudotime','pseudotime_precomputed'} 
+			  (default: rna_velocity)
+		Dynamics used to orient and/or weight edges in the DAG of cells.
+		If 'pseudotime_precomputed', the precomputed pseudotime values must be
+		included as an observation category named 'pseudotime' in the included 
+		AnnData object (e.g., adata.obs['pseudotime'] = [list of float]).
+	velo_mode: {'stochastic','deterministic','dynamical'} (default: 'stochastic') 
+		RNA velocity estimation using either the steady-state/deterministic, 
+		stochastic, or dynamical model of transcriptional dynamics from scVelo
+		(Bergen et al., 2020).
+	proba: 'bool' (default: True)
+		Whether to use the transition probabilities from CellRank (Lange et al., 2022) 
+		in weighting the edges of the DAG or to discretize these probabilities by
+		retaining only the top half of edges per cell.
+	n_neighbors: 'int' (default: 15)
+		Number of nearest neighbors to use in constructing a k-nearest
+		neighbor graph for constructing a DAG if a custom DAG is not provided.
+	n_comps: 'int' (default: 50)
+		Number of principle components to compute and use for representing
+		the gene expression profiles of cells.
+	use_time: 'bool' (default: False)
+		Whether to integrate time stamps in constructing the DAG. If True, time 
+		stamps must be included as an observation category named 'time' in the 
+		included AnnData object (e.g., adata.obs['time'] = [list of float]).
+	"""
 
 	sc.tl.pca(adata, n_comps=n_comps, svd_solver='arpack')
 	if use_time:
@@ -26,7 +58,7 @@ def construct_dag(adata,dynamics='rna_velocity',proba=True,n_neighbors=30,
 							  params= {'decomposition_model': 'pca', 
 							  'num_top_components': adata.obsm['X_pca'].shape[1]})
 		adata.obsm['X_rep'] = sqp.fit_transform(adata.obsm['X_pca'],[adata.obs['time']],
-                           ['numeric'],[1])
+						   ['numeric'],[1])
 	else:
 		adata.obsm['X_rep'] = adata.obsm['X_pca']
 
@@ -77,7 +109,7 @@ def construct_dag(adata,dynamics='rna_velocity',proba=True,n_neighbors=30,
 def construct_dag_pseudotime(joint_feature_embeddings,iroot,n_neighbors=15,pseudotime_algo='dpt',
 							 precomputed_pseudotime=None):
 	
-	"""Constructs the adjacency matrix for a DAG.
+	"""Constructs the adjacency matrix for a DAG using pseudotime.
 	Parameters
 	----------
 	joint_feature_embeddings: 'numpy.ndarray' (default: None)
@@ -95,6 +127,8 @@ def construct_dag_pseudotime(joint_feature_embeddings,iroot,n_neighbors=15,pseud
 		is not provided. 'dpt' and 'palantir' perform the diffusion pseudotime
 		(Haghverdi et al., 2016) and Palantir (Setty et al., 2019) algorithms, 
 		respectively.
+	precomputed_pseudotime: 'numpy.ndarray' or List (default: None)
+		Precomputed pseudotime values for all cells.
 	"""
 
 	pseudotime,knn_graph = infer_knngraph_pseudotime(joint_feature_embeddings,iroot,
@@ -120,7 +154,6 @@ def infer_knngraph_pseudotime(joint_feature_embeddings,iroot,n_neighbors=15,pseu
 		sc.pp.neighbors(adata,use_rep='X_joint',n_neighbors=n_neighbors)
 		adata.obs['pseudotime'] = precomputed_pseudotime
 		knn_graph = adata.obsp['distances'].astype(bool).astype(float)
-
 	elif pseudotime_algo == 'palantir':
 		sc.pp.neighbors(adata,use_rep='X_joint',n_neighbors=n_neighbors)
 		sce.tl.palantir(adata, knn=n_neighbors,use_adjacency_matrix=True,
@@ -245,19 +278,14 @@ def estimate_interactions(all_lags,lag=5,lower_thresh=0.01,upper_thresh=0.95,
 				all_interactions.append(interactions)
 	return torch.stack(all_interactions).mean(0)
 
-def estimate_lags(all_lags,lag,thresh=1e-8,lower_thresh=0.01,upper_thresh=0.95):
+def estimate_lags(all_lags,lag,lower_thresh=0.01,upper_thresh=1.):
 	
-	softmax = nn.Softmax(dim=-1)
+	retained_interactions = []
+	for i in range(len(all_lags)):
+		nnz_percent = (all_lags[i] != 0).float().mean().data.numpy()
+		if nnz_percent > lower_thresh and nnz_percent < upper_thresh:            
+			retained_interactions.append(all_lags[i])
+	retained_interactions = torch.stack(retained_interactions)
 
-	# consider only lambda values resulting GC matrices with between 1% and 95% non-zero values
-	inds2keep = [i for i,gc in enumerate(all_lags) if 
-				 (torch.norm(gc,dim=-1) > thresh).float().mean() <= upper_thresh and
-				 (torch.norm(gc,dim=-1) > thresh).float().mean() >= lower_thresh]
-	mats = (abs(all_lags[inds2keep]) > thresh).float() 
-		
-	for i in range(len(mats) - 2, -1, -1):
-		mats[i] = lor(mats[i], mats[i + 1])
-	bin_lags = abs(torch.FloatTensor(mats[0]))
-
-	bin_lags = softmax(bin_lags)
-	return (bin_lags[:,:,[lag-1]].mean(-1)-bin_lags[:,:,[0]].mean(-1)).squeeze()
+	est_lags = normalize(retained_interactions,p=1,dim=-1).mean(0)
+	return (est_lags*(torch.arange(lag)+1)).sum(-1)
