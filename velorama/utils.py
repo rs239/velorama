@@ -9,10 +9,12 @@ import scanpy.external as sce
 from anndata import AnnData
 import cellrank as cr
 import scvelo as scv
+# needed to install schema
 import schema
 from torch.nn.functional import normalize
+# change from cellrank.tl.kernels import VelocityKernel to the below
 
-from cellrank.tl.kernels import VelocityKernel
+from cellrank.kernels import VelocityKernel
 
 import torch
 import torch.nn as nn
@@ -226,7 +228,7 @@ def calculate_diffusion_lags(A,X,lag):
 	ax = []
 	cur = A
 	for _ in range(lag):
-		ax.append(torch.matmul(cur, X))
+		ax.append(torch.matmul(cur, X.float()))
 		cur = torch.matmul(A, cur)
 		for i in range(len(cur)):
 			cur[i][i] = 0
@@ -257,7 +259,7 @@ def load_gc_interactions(name,results_dir,lam_list,hidden_dim=16,lag=5,penalty='
 
 def lor(x, y):
 	return x + y
-
+# 0.95
 def estimate_interactions(all_lags,lag=5,lower_thresh=0.01,upper_thresh=0.95,
 						  binarize=False,l2_norm=False):
 

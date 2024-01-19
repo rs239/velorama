@@ -47,8 +47,10 @@ def train_model(config, checkpoint_dir = None):
 
 	file_name = '{}.seed{}.lam{}.h{}.{}.lag{}.{}'.format(name,seed,np.round(lam,4),
 				hidden[0],penalty,lag,dynamics)
-	gc_path1 = os.path.join(results_dir,dir_name,file_name + '.pt')
-	gc_path2 = os.path.join(results_dir,dir_name,file_name + '.ignore_lag.pt')
+	# gc_path1 = os.path.join(results_dir,dir_name,file_name + '.pt')
+	# gc_path2 = os.path.join(results_dir,dir_name,file_name + '.ignore_lag.pt')
+	gc_path1 = os.path.join(results_dir,file_name + '.pt')
+	gc_path2 = os.path.join(results_dir,file_name + '.ignore_lag.pt')
 
 	if not os.path.exists(gc_path1) and not os.path.exists(gc_path2):
 		
@@ -173,7 +175,9 @@ def train_model(config, checkpoint_dir = None):
 		file_name = '{}.seed{}.lam{}.h{}.{}.lag{}.{}'.format(name,seed,np.round(lam,4),
 					hidden[0],penalty,lag,dynamics)
 		GC_lag = vmlp.GC(threshold=False, ignore_lag=False).cpu()
+		# torch.save(GC_lag, os.path.join(results_dir,dir_name,file_name + '.pt'))
 		torch.save(GC_lag, os.path.join(results_dir,dir_name,file_name + '.pt'))
+		# torch.save(os.path.join(results_dir,dir_name,file_name + '.pt'))
 
 		GC_lag = vmlp.GC(threshold=False, ignore_lag=True).cpu()
 		torch.save(GC_lag, os.path.join(results_dir,dir_name,file_name + '.ignore_lag.pt'))

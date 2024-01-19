@@ -15,36 +15,40 @@ from ray import tune
 import statistics
 import scvelo as scv
 import pandas as pd
+import shutil
 
 from models import *
 from train import *
 from utils import *
+# torch.cuda.empty_cache()
+# torch.cuda.set_per_process_memory_fraction(0.7, 0)
+
 
 
 def execute_cmdline():
 
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-n','--name',dest='name',type=str,default='velorama_run',help='substring to have in our output files')
-	parser.add_argument('-ds','--dataset',dest='dataset',type=str)
-	parser.add_argument('-dyn','--dyn',dest='dynamics',type=str,default='pseudotime', 
+	parser.add_argument('-ds','--dataset',dest='dataset', default = "KarenSN.h5ad",type=str)
+	parser.add_argument('-dyn','--dyn',dest='dynamics',type=str,default='rna_velocity', 
 						choices=['pseudotime','rna_velocity','pseudotime_time','pseudotime_precomputed'])
-	parser.add_argument('-dev','--device',dest='device',type=str,default='cpu')
+	parser.add_argument('-dev','--device',dest='device',type=str,default='cuda')
 	parser.add_argument('-s','--seed',dest='seed',type=int,default=0,help='Random seed. Set to 0,1,2 etc.')
 	parser.add_argument('-lmr','--lam_ridge',dest='lam_ridge',type=float,default=0., help='Currenty unsupported')
 	parser.add_argument('-p','--penalty',dest='penalty',type=str,default='H')
 	parser.add_argument('-l','--lag',dest='lag',type=int,default=5)
 	parser.add_argument('-hd', '--hidden',dest='hidden',type=int,default=32)
-	parser.add_argument('-mi','--max_iter',dest='max_iter',type=int,default=1000)
+	parser.add_argument('-mi','--max_iter',dest='max_iter',type=int,default=1000) #1000
 	parser.add_argument('-lr','--learning_rate',dest='learning_rate',type=float,default=0.01)
 	parser.add_argument('-pr','--proba',dest='proba',type=int,default=1)
 	parser.add_argument('-ce','--check_every',dest='check_every',type=int,default=10)
-	parser.add_argument('-rd','--root_dir',dest='root_dir',type=str)
+	parser.add_argument('-rd','--root_dir',dest='root_dir',type=str, default = "./datasets")
 	parser.add_argument('-sd','--save_dir',dest='save_dir',type=str,default='./results')
 	parser.add_argument('-ls','--lam_start',dest='lam_start',type=float,default=-2)
 	parser.add_argument('-le','--lam_end',dest='lam_end',type=float,default=1)
-	parser.add_argument('-xn','--x_norm',dest='x_norm',type=str,default='zscore') # ,choices=['none','zscore','to_count:zscore','zscore_pca','maxmin','fill_zscore'])
-	parser.add_argument('-nl','--num_lambdas',dest='num_lambdas',type=int,default=19)
-	parser.add_argument('-rt','--reg_target',dest='reg_target',type=int,default=0)
+	parser.add_argument('-xn','--x_norm',dest='x_norm',type=str,default='none') # ,choices=['none','zscore','to_count:zscore','zscore_pca','maxmin','fill_zscore'])
+	parser.add_argument('-nl','--num_lambdas',dest='num_lambdas',type=int,default=12) #19
+	parser.add_argument('-rt','--reg_target',dest='reg_target',type=int,default=1)
 	parser.add_argument('-nn','--n_neighbors',dest='n_neighbors',type=int,default=30)
 	parser.add_argument('-vm','--velo_mode',dest='velo_mode',type=str,default='stochastic')
 	parser.add_argument('-ts','--time_series',dest='time_series',type=int,default=0)
@@ -55,7 +59,7 @@ def execute_cmdline():
 	if not os.path.exists(args.save_dir):
 		os.mkdir(args.save_dir)
 
-	adata = sc.read(os.path.join(args.root_dir,'{}.h5ad'.format(args.dataset)))
+	adata = sc.read(os.path.join(args.root_dir,'{}'.format(args.dataset)))
 
 	if not args.reg_target:
 		adata.var['is_target'] = True
@@ -201,7 +205,7 @@ def execute_cmdline():
 	if not os.path.exists(os.path.join(args.save_dir,dir_name)):
 		os.mkdir(os.path.join(args.save_dir,dir_name))
 
-	ray.init(object_store_memory=10**9)
+	ray.init(object_store_memory=10**9, num_cpus=1)
 
 	total_start = time.time()
 	lam_list = np.logspace(args.lam_start, args.lam_end, num=args.num_lambdas).tolist()
@@ -227,10 +231,23 @@ def execute_cmdline():
 			  'dir_name': dir_name,
 			  'reg_target': args.reg_target}
 
-	resources_per_trial = {"cpu": 1, "gpu": 0.2, "memory": 2 * 1024 * 1024 * 1024}
+	resources_per_trial = {"cpu": 1, "gpu": 1, "memory": 16 * 1024 * 1024 * 1024}
 	analysis = tune.run(train_model,resources_per_trial=resources_per_trial,config=config,
-						local_dir=os.path.join(args.root_dir,'results'))
-	
+						local_dir=os.path.join('results'))
+
+	target_folder = os.path.join(args.save_dir, dir_name)
+
+	for subdir, dirs, files in os.walk("./results"):
+		for file in files:
+			if '.pt' in file:
+				# Construct the full file paths
+				file_path = os.path.join(subdir, file)
+				target_path = os.path.join(target_folder, file)
+		
+
+				if file_path != target_path:# Copy the file
+					shutil.copy(file_path, target_path)
+					print(f"Copied {file_path} to {target_path}")
 	# aggregate results
 	lam_list = [np.round(lam,4) for lam in lam_list]
 	all_lags = load_gc_interactions(args.name,args.save_dir,lam_list,hidden_dim=args.hidden,
