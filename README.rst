@@ -42,5 +42,5 @@ Here, ``$dataset`` is the name of the dataset associated with the saved AnnData 
 We encourage you to report issues at our `Github page`_ ; you can also create pull reports there to contribute your enhancements.
 If Velorama is useful for your research, please consider citing `bioRxiv (2022)`_.
 
-.. _bioRxiv (2022): https://www.biorxiv.org/content/10.1101/TBD
+.. _bioRxiv (2022): https://www.biorxiv.org/content/10.1101/2022.10.18.512766v3
 .. _Github page: https://github.com/rs239/velorama
