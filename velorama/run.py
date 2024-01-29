@@ -28,6 +28,7 @@ def execute_cmdline():
 	parser.add_argument('-ds','--dataset',dest='dataset',type=str)
 	parser.add_argument('-dyn','--dyn',dest='dynamics',type=str,default='pseudotime', 
 						choices=['pseudotime','rna_velocity','pseudotime_time','pseudotime_precomputed'])
+	parser.add_argument('-ptloc','--ptloc',dest='ptloc',type=str,default='pseudotime')
 	parser.add_argument('-dev','--device',dest='device',type=str,default='cpu')
 	parser.add_argument('-s','--seed',dest='seed',type=int,default=0,help='Random seed. Set to 0,1,2 etc.')
 	parser.add_argument('-lmr','--lam_ridge',dest='lam_ridge',type=float,default=0., help='Currenty unsupported')
@@ -185,7 +186,7 @@ def execute_cmdline():
 		sc.pp.log1p(adata)
 
 	sc.pp.scale(adata)
-	A = construct_dag(adata,dynamics=args.dynamics,proba=args.proba,
+	A = construct_dag(adata,dynamics=args.dynamics,ptloc=args.ptloc,proba=args.proba,
 					  n_neighbors=args.n_neighbors,velo_mode=args.velo_mode,
 					  use_time=args.time_series,n_comps=args.n_comps)
 	A = torch.FloatTensor(A)

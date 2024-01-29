@@ -17,7 +17,7 @@ from cellrank.tl.kernels import VelocityKernel
 import torch
 import torch.nn as nn
 
-def construct_dag(adata,dynamics='rna_velocity',velo_mode='stochastic',proba=True,
+def construct_dag(adata,dynamics='rna_velocity',ptloc='pseudotime',velo_mode='stochastic',proba=True,
 				  n_neighbors=30,n_comps=50,use_time=False):
 
 	"""Constructs the adjacency matrix for a DAG.
@@ -70,7 +70,7 @@ def construct_dag(adata,dynamics='rna_velocity',velo_mode='stochastic',proba=Tru
 		A = construct_dag_pseudotime(adata.obsm['X_rep'],adata.uns['iroot'],
 									 n_neighbors=n_neighbors,
 									 pseudotime_algo='precomputed',
-									 precomputed_pseudotime=adata.obs['pseudotime'].values).T
+									 precomputed_pseudotime=adata.obs[ptloc].values).T
 
 	elif dynamics == 'rna_velocity':
 		scv.pp.moments(adata, n_neighbors=n_neighbors, use_rep='X_rep')
