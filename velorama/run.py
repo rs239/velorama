@@ -228,7 +228,8 @@ def execute_cmdline():
 			  'dir_name': dir_name,
 			  'reg_target': args.reg_target}
 
-	resources_per_trial = {"cpu": 1, "gpu": 0.2, "memory": 2 * 1024 * 1024 * 1024}
+	ngpu = 0.2 if (args.device == 'gpu') else 0 
+	resources_per_trial = {"cpu": 1, "gpu": ngpu, "memory": 2 * 1024 * 1024 * 1024}
 	analysis = tune.run(train_model,resources_per_trial=resources_per_trial,config=config,
 						local_dir=os.path.join(args.root_dir,'results'))
 	
