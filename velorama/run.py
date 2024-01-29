@@ -44,7 +44,7 @@ def execute_cmdline():
 	parser.add_argument('-le','--lam_end',dest='lam_end',type=float,default=1)
 	parser.add_argument('-xn','--x_norm',dest='x_norm',type=str,default='zscore') # ,choices=['none','zscore','to_count:zscore','zscore_pca','maxmin','fill_zscore'])
 	parser.add_argument('-nl','--num_lambdas',dest='num_lambdas',type=int,default=19)
-	parser.add_argument('-rt','--reg_target',dest='reg_target',type=int,default=0)
+	parser.add_argument('-rt','--reg_target',dest='reg_target',type=int,default=1)
 	parser.add_argument('-nn','--n_neighbors',dest='n_neighbors',type=int,default=30)
 	parser.add_argument('-vm','--velo_mode',dest='velo_mode',type=str,default='stochastic')
 	parser.add_argument('-ts','--time_series',dest='time_series',type=int,default=0)
