@@ -12,7 +12,7 @@ import scvelo as scv
 import schema
 from torch.nn.functional import normalize
 
-from cellrank.tl.kernels import VelocityKernel
+from cellrank.kernels import VelocityKernel
 
 import torch
 import torch.nn as nn
