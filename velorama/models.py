@@ -11,7 +11,7 @@
 import torch
 import torch.nn as nn
 
-from utils import activation_helper
+from .utils import activation_helper
 
 class VeloramaMLP(nn.Module):
 
