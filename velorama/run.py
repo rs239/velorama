@@ -16,9 +16,9 @@ import statistics
 import scvelo as scv
 import pandas as pd
 
-from models import *
-from train import *
-from utils import *
+from .models import *
+from .train import *
+from .utils import *
 
 
 def execute_cmdline():
