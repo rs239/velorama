@@ -8,6 +8,6 @@ setup(name='velorama',
       author_email='rsingh@alum.mit.edu',
       license='MIT',
       packages=['velorama'],
-      install_requires = 'numpy,scipy,pandas,scikit-learn,cellrank,scvelo,ray,schema_learn'.split(','),
+      install_requires = 'numpy,scipy,pandas,scikit-learn,cellrank,scvelo,ray'.split(','),
       scripts = ['bin/velorama'],
       zip_safe=False)
