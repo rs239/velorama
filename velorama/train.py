@@ -15,7 +15,7 @@ import time
 from .models import *
 from .utils import *
 
-def train_model(config, checkpoint_dir = None):
+def train_model(config):
 
 	AX = config["AX"]
 	AY = config["AY"]
