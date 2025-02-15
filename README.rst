@@ -20,6 +20,18 @@ Velorama offers support for both pseudotime and RNA velocity data.
 Velorama is based on a Granger causal approach and models the differentiation landscape as a directed acyclic graph (DAG) of cells, rather than as a linear total ordering required by previous approaches.
 
 =================
+Installation
+=================
+
+To install Velorama, follow the instructions below
+
+Using Conda/Mamba:
+
+  git clone https://github.com/rs239/velorama.git
+  cd ./velorama
+  export SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL=True
+  pip install .  
+=================
 API Example Usage
 =================
 

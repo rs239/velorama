@@ -233,10 +233,10 @@ def execute_cmdline():
 	ngpu = 0.2 if (args.device == 'cuda') else 0 
 	resources_per_trial = {"cpu": 1, "gpu": ngpu, "memory": 2 * 1024 * 1024 * 1024}
 	analysis = tune.run(train_model,resources_per_trial=resources_per_trial,config=config,
-						local_dir=os.path.join(args.root_dir,'results'))
+						local_dir=os.path.join(args.root_dir,args.save_dir))
 
-	target_dir = os.path.join('./results', dir_name)
-	base_dir = './results'
+	target_dir = os.path.join(args.save_dir, dir_name)
+	base_dir = args.save_dir
 	move_files(base_dir, target_dir)
 	
 	# aggregate results
