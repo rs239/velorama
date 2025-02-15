@@ -25,7 +25,7 @@ Installation
 
 To install Velorama, follow the instructions below
 
-Using Conda/Mamba:
+Using Conda/Mamba: ::
 
   git clone https://github.com/rs239/velorama.git
   cd ./velorama
