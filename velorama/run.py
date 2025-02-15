@@ -15,10 +15,12 @@ from ray import tune
 import statistics
 import scvelo as scv
 import pandas as pd
+import shutil
 
 from .models import *
 from .train import *
 from .utils import *
+from .utils import move_files
 
 
 def execute_cmdline():
@@ -42,7 +44,7 @@ def execute_cmdline():
 	parser.add_argument('-rd','--root_dir',dest='root_dir',type=str)
 	parser.add_argument('-sd','--save_dir',dest='save_dir',type=str,default='./results')
 	parser.add_argument('-ls','--lam_start',dest='lam_start',type=float,default=-2)
-	parser.add_argument('-le','--lam_end',dest='lam_end',type=float,default=1)
+	parser.add_argument('-le','--lam_end',type=float,default=1)
 	parser.add_argument('-xn','--x_norm',dest='x_norm',type=str,default='zscore') # ,choices=['none','zscore','to_count:zscore','zscore_pca','maxmin','fill_zscore'])
 	parser.add_argument('-nl','--num_lambdas',dest='num_lambdas',type=int,default=19)
 	parser.add_argument('-rt','--reg_target',dest='reg_target',type=int,default=1)
@@ -229,10 +231,13 @@ def execute_cmdline():
 			  'reg_target': args.reg_target}
 
 	ngpu = 0.2 if (args.device == 'cuda') else 0 
-	print('Using {} GPUs'.format(ngpu))
 	resources_per_trial = {"cpu": 1, "gpu": ngpu, "memory": 2 * 1024 * 1024 * 1024}
 	analysis = tune.run(train_model,resources_per_trial=resources_per_trial,config=config,
 						local_dir=os.path.join(args.root_dir,'results'))
+
+	target_dir = os.path.join('./results', dir_name)
+	base_dir = './results'
+	move_files(base_dir, target_dir)
 	
 	# aggregate results
 	lam_list = [np.round(lam,4) for lam in lam_list]

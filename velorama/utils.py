@@ -11,6 +11,7 @@ import cellrank as cr
 import scvelo as scv
 import schema
 from torch.nn.functional import normalize
+import shutil
 
 from cellrank.kernels import VelocityKernel
 
@@ -289,3 +290,14 @@ def estimate_lags(all_lags,lag,lower_thresh=0.01,upper_thresh=1.):
 
 	est_lags = normalize(retained_interactions,p=1,dim=-1).mean(0)
 	return (est_lags*(torch.arange(lag)+1)).sum(-1)
+
+def move_files(base_dir, target_dir):
+    os.makedirs(target_dir, exist_ok=True)  # Ensure the target directory exists
+    # Walk through all directories recursively
+    for root, dirs, files in os.walk(base_dir):
+        if 'train' in root:  # Check if ‘train’ is in the directory path
+            for file in files:
+                if file.endswith('.pt'):  # Check if the file ends with ‘.pt’
+                    source_path = os.path.join(root, file)
+                    shutil.move(source_path, target_dir)  # Move the file
+                    print(f"Moved: {source_path} to {target_dir}")
