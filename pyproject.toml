@@ -1,0 +1,45 @@
+[project]
+name = "velorama"
+version = "0.0.3"
+description = "Gene regulatory network inference for RNA velocity and pseudotime data"
+authors = [
+    { name = "Your Name" }
+]
+license = { text = "MIT" }
+dependencies = [
+    "numpy>=1.26.4",
+    "scipy>=1.11.4",
+    "pandas>=2.2.3",
+    "scikit-learn>=1.5.2",
+    "cellrank>=2.0.6",
+    "scvelo>=0.3.2",
+    "scanpy>=1.10.4",
+    "anndata>=0.11.1",
+    "torch==1.13.0",
+    "ray[tune]==2.6.0",
+    "matplotlib>=3.9.2",
+    "h5py>=3.12.1",
+    "tqdm>=4.67.1",
+    "networkx>=3.4.2",
+    "seaborn>=0.13.2",
+    "statsmodels>=0.14.4",
+    "schema_learn>=0.1.5.5",
+    "umap-learn>=0.5.7"
+]
+requires-python = ">=3.10"
+
+[build-system]
+requires = [
+    "setuptools>=75.1.0",
+    "wheel>=0.44.0",
+    "pip>=24.2",
+    "build"
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["velorama"]
+zip-safe = false
+
+[project.scripts]
+velorama = "velorama:execute_cmdline"
