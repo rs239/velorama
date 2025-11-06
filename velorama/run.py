@@ -32,6 +32,7 @@ def execute_cmdline():
 						choices=['pseudotime','rna_velocity','pseudotime_time','pseudotime_precomputed'])
 	parser.add_argument('-ptloc','--ptloc',dest='ptloc',type=str,default='pseudotime')
 	parser.add_argument('-dev','--device',dest='device',type=str,default='cpu')
+	parser.add_argument('-cp','--ncpus', type=int, default=2)
 	parser.add_argument('-s','--seed',dest='seed',type=int,default=0,help='Random seed. Set to 0,1,2 etc.')
 	parser.add_argument('-lmr','--lam_ridge',dest='lam_ridge',type=float,default=0., help='Currenty unsupported')
 	parser.add_argument('-p','--penalty',dest='penalty',type=str,default='H')
@@ -204,7 +205,7 @@ def execute_cmdline():
 	if not os.path.exists(os.path.join(args.save_dir,dir_name)):
 		os.mkdir(os.path.join(args.save_dir,dir_name))
 
-	ray.init(object_store_memory=10**9)
+	ray.init(object_store_memory=10**9, num_cpus=args.ncpus)
 
 	total_start = time.time()
 	lam_list = np.logspace(args.lam_start, args.lam_end, num=args.num_lambdas).tolist()
